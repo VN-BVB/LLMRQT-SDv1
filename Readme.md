@@ -321,6 +321,7 @@ python -O bench.py --llama --size 70 --gpus 5 --spec --async \
 - [x] EAGLE3Pro + vLLM + AWQ Marlin 集成
 - [x] CUDA Graph、Static KV Cache 与 Packed Verify
 - [x] SSD 异步调度与 Speculation Cache 探索
+- [ ] Multi Lora训练，调度
 - [ ] 多 Batch / Continuous Batching 系统化基准
 - [ ] 长上下文与多并发参数扫描
 - [ ] OpenAI-compatible Serving API
