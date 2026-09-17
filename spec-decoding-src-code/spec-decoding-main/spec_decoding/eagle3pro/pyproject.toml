@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+# EAGLE3PRO PATH: 本目录是独立工作副本；安装后只导入 eagle3pro，不会覆盖冻结的 eagle3_sgl。
+# 在本目录（eagle3pro 组件根）执行 `pip install -e .` 时，仅安装 Python 包
+# `spec_decoding.eagle3pro` 及其子包（example / kernels），不打包、不依赖上级
+# `spec_decoding` 目录里的其它子模块。上级 `spec_decoding` 在 site-packages 中
+# 作为 namespace 存在即可。
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eagle3-pro"
+version = "0.1.0"
+description = "Optimized EAGLE3 speculative decoding (spec_decoding.eagle3pro)"
+readme = "example/README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "torch",
+    "transformers",
+]
+
+[tool.setuptools]
+packages = [
+    "spec_decoding.eagle3pro",
+    "spec_decoding.eagle3pro.example",
+    "spec_decoding.eagle3pro.kernels",
+]
+
+[tool.setuptools.package-dir]
+"spec_decoding.eagle3pro" = "."

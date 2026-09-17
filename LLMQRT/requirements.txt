@@ -1,0 +1,6 @@
+transformers==4.54.0 # qwen3需要安装transformers=4.54.0，其它模型如果需要transformers版本不兼容，可能需要降transformers版本号至4.46.0
+zstandard
+multiprocess
+xxhash
+# datasets==3.6.0 # 如若安装datasets的时候碰到conflicting dependencies的错误，单独运行pip install datasets==3.6.0 --no-deps
+accelerate

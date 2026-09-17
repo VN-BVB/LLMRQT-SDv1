@@ -1,0 +1,153 @@
+{
+  "date": "2026-09-12",
+  "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "models": {
+    "target": "Qwen/Qwen3-1.7B",
+    "draft": "AngelSlim/Qwen3-1.7B_eagle3",
+    "dtype": "float16"
+  },
+  "isolated_components": {
+    "config": {
+      "topk": 8,
+      "num_steps": 8,
+      "max_tree_nodes": 64,
+      "past_len": 512,
+      "repetitions": 9,
+      "statistic": "median wall time with CUDA synchronization and alternating old/new order"
+    },
+    "step1_accept_selection": {
+      "old_median_ms": 5.131525998876896,
+      "new_median_ms": 0.29358299980231095,
+      "speedup": 17.47896166444343,
+      "old_argmax_calls": 57,
+      "new_argmax_calls": 2,
+      "old_d2h_calls": 57,
+      "new_d2h_calls": 1,
+      "exact_result_equal": true
+    },
+    "step2_depth_batched_draft": {
+      "old_median_ms": 15.733567001007032,
+      "new_median_ms": 2.6838009998755297,
+      "speedup": 5.862419382710092,
+      "old_step_calls": 7,
+      "new_step_calls": 1,
+      "old_processed_rows": 7,
+      "new_processed_rows": 8,
+      "exact_tree_equal": true
+    },
+    "step3_selected_layer_capture": {
+      "old_median_ms": 28.641659999266267,
+      "new_median_ms": 29.12782299972605,
+      "speedup": 0.9833093259161746,
+      "relative_change_percent": -1.6973981273160854,
+      "old_hidden_tensor_references": 29,
+      "new_captured_tensor_references": 3,
+      "max_abs_diff": 0.0
+    },
+    "step4_ancestor_mask": {
+      "shape": [64, 576],
+      "old_median_ms": 1376.7410370001016,
+      "new_median_ms": 0.9878849996312056,
+      "speedup": 1393.6248019901736,
+      "old_scalar_cuda_writes": 32888,
+      "new_vectorized_scatter_rounds": 1,
+      "exact_mask_equal": true
+    }
+  },
+  "multibranch_end_to_end": {
+    "config": {
+      "topk": 8,
+      "num_steps": 8,
+      "max_tree_nodes": 64,
+      "tree_expand_mode": "static",
+      "prompts": 3,
+      "tokens_per_prompt": 16
+    },
+    "old_step1_step2_step4": {
+      "elapsed_seconds": 8.335070993000045,
+      "tokens_per_second": 5.75879918003234,
+      "rounds": 34,
+      "matched_draft_tokens": 16,
+      "proposed_draft_tokens": 2176,
+      "acceptance_length": 1.411764705882353,
+      "draft_acceptance_rate": 0.007352941176470588,
+      "exact_vs_greedy": true
+    },
+    "new_step1_step2_step4": {
+      "elapsed_seconds": 2.4893188730002294,
+      "tokens_per_second": 19.282383032812678,
+      "rounds": 34,
+      "matched_draft_tokens": 16,
+      "proposed_draft_tokens": 2176,
+      "acceptance_length": 1.411764705882353,
+      "draft_acceptance_rate": 0.007352941176470588,
+      "exact_vs_greedy": true
+    },
+    "tps_gain_percent": 234.8333989431525,
+    "latency_reduction_percent": 70.13440107359844,
+    "exact_old_new": true
+  },
+  "gpu_resident_top1": {
+    "config": {
+      "topk": 1,
+      "num_steps": 1,
+      "prompts": 3,
+      "tokens_per_prompt": 128,
+      "pairs": 3
+    },
+    "legacy_mean_tps": 55.94758705056682,
+    "gpu_resident_mean_tps": 60.52382579276559,
+    "ratio_of_mean_tps_gain_percent": 8.179510473012286,
+    "paired_tps_gain_percent": [
+      10.29054484435088,
+      7.055073869222928,
+      7.240114760415817
+    ],
+    "legacy_mean_seconds": 6.864384134999757,
+    "gpu_resident_mean_seconds": 6.344702995333743,
+    "rounds": 277,
+    "matched_draft_tokens": 109,
+    "proposed_draft_tokens": 277,
+    "acceptance_length": 1.3862815884476534,
+    "draft_acceptance_rate": 0.3935018050541516,
+    "exact_384_tokens_every_run": true
+  },
+  "pro_flash_kv_alternative_to_hf_static_cache": {
+    "config": {
+      "topk": 1,
+      "num_steps": 1,
+      "prompts": 3,
+      "tokens_per_prompt": 128
+    },
+    "dynamic_kv_tps": 53.02827392885025,
+    "flash_kv_tps": 61.63673680119391,
+    "tps_gain_percent": 16.23372256825466,
+    "dynamic_seconds": 7.241419935999147,
+    "flash_kv_seconds": 6.230050776999633,
+    "latency_reduction_percent": 13.966448126723208,
+    "acceptance_length_both": 1.3862815884476534,
+    "draft_acceptance_rate_both": 0.3935018050541516,
+    "exact_384_tokens_both": true
+  },
+  "vllm_comparison": {
+    "config": {
+      "enforce_eager": true,
+      "enable_prefix_caching": false,
+      "max_num_seqs": 1,
+      "prompts": 3,
+      "tokens_per_prompt": 128,
+      "full_shape_warmup": true
+    },
+    "vllm_greedy_tps": 59.407544138227244,
+    "vllm_eagle3_tps": 54.43861767568003,
+    "vllm_eagle3_acceptance_length": 1.3876811594202898,
+    "vllm_eagle3_acceptance_rate": 0.38768115942028986,
+    "vllm_eagle3_accepted": 107,
+    "vllm_eagle3_proposed": 276,
+    "pro_eagle3_mean_tps": 60.52382579276559,
+    "pro_acceptance_length": 1.3862815884476534,
+    "pro_acceptance_rate": 0.3935018050541516,
+    "pro_vs_vllm_eagle3_tps_percent": 11.178109174884643,
+    "all_three_outputs_exact_384_tokens": true
+  }
+}

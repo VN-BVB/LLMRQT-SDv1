@@ -1,0 +1,16 @@
+* text=auto
+
+*.py  text eol=lf
+*.cu  text eol=lf
+*.cuh text eol=lf
+*.cpp text eol=lf
+*.cc  text eol=lf
+*.h   text eol=lf
+*.hpp text eol=lf
+*.sh  text eol=lf
+*.md  text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf

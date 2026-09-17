@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: Apache-2.0
+# 在本目录（eagle3_sgl_profile_opti 组件根）执行 `pip install -e .` 时，仅安装 Python 包
+# `spec_decoding.eagle3_sgl_profile_opti` 及其子包（example / kernels），不打包、不依赖上级
+# `spec_decoding` 目录里的其它子模块。上级 `spec_decoding` 在 site-packages 中作为
+# namespace 存在即可。
+#
+# 注意：example 下的 phase0 / phase1 若干脚本会 import spec_decoding.eagle3_sgl 做原版
+# 对照（A/B），那部分需要另外安装 eagle3_sgl 组件；
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eagle3-sgl-profile-opti"
+version = "0.1.0"
+description = "EAGLE3 speculative decoding, profiled and optimized (spec_decoding.eagle3_sgl_profile_opti)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "torch",
+    "transformers",
+]
+
+[tool.setuptools]
+packages = [
+    "spec_decoding.eagle3_sgl_profile_opti",
+    "spec_decoding.eagle3_sgl_profile_opti.example",
+    "spec_decoding.eagle3_sgl_profile_opti.kernels",
+]
+
+[tool.setuptools.package-dir]
+"spec_decoding.eagle3_sgl_profile_opti" = "."

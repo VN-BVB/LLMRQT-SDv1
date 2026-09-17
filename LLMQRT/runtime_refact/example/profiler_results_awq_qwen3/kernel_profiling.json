@@ -1,0 +1,149 @@
+{
+  "total_cuda_time_ms": 2592.5240199999803,
+  "num_cuda_kernels": 0,
+  "num_cpu_ops_with_cuda": 155,
+  "top10_by_total_time": [
+    {
+      "rank": 1,
+      "name": "model_generate",
+      "total_time_ms": 684.1227289999999,
+      "count": 1,
+      "avg_time_ms": 684.1227289999999
+    },
+    {
+      "rank": 2,
+      "name": "model_generate",
+      "total_time_ms": 526.0197389999935,
+      "count": 1,
+      "avg_time_ms": 526.0197389999935
+    },
+    {
+      "rank": 3,
+      "name": "WQLinearMMFunction",
+      "total_time_ms": 475.67766499999914,
+      "count": 1800,
+      "avg_time_ms": 0.264265369444444
+    },
+    {
+      "rank": 4,
+      "name": "gemv_kernel_g128(float4 const*, unsigned int const*, unsigned int const*, __half const*, __half*, int, int)",
+      "total_time_ms": 309.9669009999993,
+      "count": 1620,
+      "avg_time_ms": 0.19133759320987614
+    },
+    {
+      "rank": 5,
+      "name": "aten::copy_",
+      "total_time_ms": 69.76302000000159,
+      "count": 7836,
+      "avg_time_ms": 0.00890288667687616
+    },
+    {
+      "rank": 6,
+      "name": "aten::mul",
+      "total_time_ms": 41.378736999995866,
+      "count": 4180,
+      "avg_time_ms": 0.009899219377989443
+    },
+    {
+      "rank": 7,
+      "name": "aten::to",
+      "total_time_ms": 36.303989000001195,
+      "count": 8566,
+      "avg_time_ms": 0.0042381495447117905
+    },
+    {
+      "rank": 8,
+      "name": "aten::_to_copy",
+      "total_time_ms": 36.303989000001195,
+      "count": 5262,
+      "avg_time_ms": 0.0068992757506653735
+    },
+    {
+      "rank": 9,
+      "name": "aten::index",
+      "total_time_ms": 33.032525999999685,
+      "count": 540,
+      "avg_time_ms": 0.06117134444444386
+    },
+    {
+      "rank": 10,
+      "name": "aten::clone",
+      "total_time_ms": 32.37879400000008,
+      "count": 1820,
+      "avg_time_ms": 0.017790546153846197
+    }
+  ],
+  "top10_by_avg_time": [
+    {
+      "rank": 1,
+      "name": "model_generate",
+      "avg_time_ms": 684.1227289999999,
+      "count": 1,
+      "total_time_ms": 684.1227289999999
+    },
+    {
+      "rank": 2,
+      "name": "model_generate",
+      "avg_time_ms": 526.0197389999935,
+      "count": 1,
+      "total_time_ms": 526.0197389999935
+    },
+    {
+      "rank": 3,
+      "name": "aten::linear",
+      "avg_time_ms": 0.41346519999996817,
+      "count": 10,
+      "total_time_ms": 4.134651999999682
+    },
+    {
+      "rank": 4,
+      "name": "nvjet_hsh_384x8_64x4_2x1_v_bz_TNT",
+      "avg_time_ms": 0.41263619999998774,
+      "count": 10,
+      "total_time_ms": 4.126361999999878
+    },
+    {
+      "rank": 5,
+      "name": "WQLinearMMFunction",
+      "avg_time_ms": 0.264265369444444,
+      "count": 1800,
+      "total_time_ms": 475.67766499999914
+    },
+    {
+      "rank": 6,
+      "name": "gemv_kernel_g128(float4 const*, unsigned int const*, unsigned int const*, __half const*, __half*, int, int)",
+      "avg_time_ms": 0.19133759320987614,
+      "count": 1620,
+      "total_time_ms": 309.9669009999993
+    },
+    {
+      "rank": 7,
+      "name": "void at::native::unrolled_elementwise_kernel<at::native::BinaryFunctor<c10::Half, c10::Half, c10::Half, at::native::binary_internal::MulFunctor<float> >, std::array<char*, 3ul>, 8, TrivialOffsetCalculator<2, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<2>, at::native::memory::StoreWithCast<1> >(int, at::native::BinaryFunctor<c10::Half, c10::Half, c10::Half, at::native::binary_internal::MulFunctor<float> >, std::array<char*, 3ul>, TrivialOffsetCalculator<2, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<2>, at::native::memory::StoreWithCast<1>)",
+      "avg_time_ms": 0.17739146111111048,
+      "count": 180,
+      "total_time_ms": 31.930462999999886
+    },
+    {
+      "rank": 8,
+      "name": "aten::topk",
+      "avg_time_ms": 0.13558170000006795,
+      "count": 10,
+      "total_time_ms": 1.3558170000006795
+    },
+    {
+      "rank": 9,
+      "name": "void at::native::index_elementwise_kernel<128, 4, at::native::gpu_index_kernel<at::native::index_kernel_impl<at::native::OpaqueType<1> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1}>(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>, at::native::index_kernel_impl<at::native::OpaqueType<1> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1} const&)::{lambda(int)#1}>(long, at::native::gpu_index_kernel<at::native::index_kernel_impl<at::native::OpaqueType<1> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1}>(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>, at::native::index_kernel_impl<at::native::OpaqueType<1> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1} const&)::{lambda(int)#1})",
+      "avg_time_ms": 0.08529639166666636,
+      "count": 360,
+      "total_time_ms": 30.706700999999892
+    },
+    {
+      "rank": 10,
+      "name": "aten::bitwise_right_shift",
+      "avg_time_ms": 0.08355386666666682,
+      "count": 360,
+      "total_time_ms": 30.079392000000055
+    }
+  ]
+}

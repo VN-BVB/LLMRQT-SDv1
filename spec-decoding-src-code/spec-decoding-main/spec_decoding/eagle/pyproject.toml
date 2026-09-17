@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: Apache-2.0
+# 在本目录（eagle 组件根）执行 `pip install -e .` 时，仅安装 Python 包
+# `spec_decoding.eagle` 及其子包（example / kernels），不打包、不依赖上级
+# `spec_decoding` 目录里的其它子模块。上级 `spec_decoding` 在 site-packages 中
+# 作为 namespace 存在即可。
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eagle1"
+version = "0.1.0"
+description = "EAGLE1 speculative decoding (spec_decoding.eagle)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "torch",
+    "transformers",
+]
+
+[tool.setuptools]
+packages = [
+    "spec_decoding.eagle",
+    "spec_decoding.eagle.example",
+    "spec_decoding.eagle.kernels",
+]
+
+[tool.setuptools.package-dir]
+"spec_decoding.eagle" = "."

@@ -1,0 +1,55 @@
+{
+  "date": "2026-09-12",
+  "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "workload": {
+    "target": "Qwen/Qwen3-1.7B",
+    "draft": "AngelSlim/Qwen3-1.7B_eagle3",
+    "dtype": "float16",
+    "target_optimization": "packed-vllm-flashkv",
+    "topk": 1,
+    "num_steps": 1,
+    "prompts": 3,
+    "tokens_per_prompt": 128,
+    "total_tokens": 384,
+    "benchmark_order": "eagle-first",
+    "ab_order": "old-then-new, repeated 3 times"
+  },
+  "legacy_python_roundtrip": {
+    "eagle_tps": [55.11936490478115, 56.56586838293368, 56.15752786398562],
+    "eagle_seconds": [6.9666985579997345, 6.788546007999685, 6.837907838999854],
+    "mean_tps": 55.94758705056682,
+    "mean_seconds": 6.864384134999757
+  },
+  "gpu_resident_top1": {
+    "eagle_tps": [60.79144786822905, 60.55663218211706, 60.22339732795067],
+    "eagle_seconds": [6.316677978000371, 6.34117166300075, 6.376259345000108],
+    "mean_tps": 60.52382579276559,
+    "mean_seconds": 6.344702995333743
+  },
+  "relative": {
+    "ratio_of_mean_tps_gain_percent": 8.179510473012286,
+    "paired_tps_gain_percent": [10.29054484435088, 7.055073869222928, 7.240114760415817],
+    "mean_paired_tps_gain_percent": 8.195244491329875,
+    "mean_latency_reduction_percent": 7.570688490702193,
+    "mean_milliseconds_saved_per_384_tokens": 519.6811396660141,
+    "milliseconds_saved_per_round": 1.8761051973502316
+  },
+  "correctness": {
+    "rounds_each_run": 277,
+    "matched_draft_tokens_each_run": 109,
+    "proposed_draft_tokens_each_run": 277,
+    "acceptance_length": 1.3862815884476534,
+    "draft_acceptance_rate": 0.3935018050541516,
+    "tokens_equal_to_same_run_greedy": "384/384 in every run",
+    "tokens_equal_to_pre_change_json": true,
+    "peak_memory_allocated_mib": 3588.501953125
+  },
+  "raw_reports": [
+    "/tmp/eagle3pro_interleaved_1_old.json",
+    "/tmp/eagle3pro_interleaved_1_new.json",
+    "/tmp/eagle3pro_interleaved_2_old.json",
+    "/tmp/eagle3pro_interleaved_2_new.json",
+    "/tmp/eagle3pro_interleaved_3_old.json",
+    "/tmp/eagle3pro_interleaved_3_new.json"
+  ]
+}
