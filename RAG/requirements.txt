@@ -1,0 +1,12 @@
+# 你的 vLLM 环境已经包含 torch、transformers 和 numpy；通常只需补装 faiss-cpu。
+# 为了让这个目录也能在一个全新的 Python 环境中使用，这里把直接依赖全部列出。
+faiss-cpu>=1.8.0
+numpy>=1.26.0
+torch>=2.2.0
+transformers>=4.44.0
+tqdm>=4.66.0
+pypdf>=5.0.0
+python-docx>=1.1.0
+pyarrow>=15.0.0
+bm25s>=0.3.11
+jieba>=0.42.1
