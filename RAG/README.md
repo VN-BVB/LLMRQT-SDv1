@@ -30,7 +30,7 @@ CMRC 2018 相关脚本和数据仍然保留，仅作为旧的中文小规模冒�
 ## 目录说明
 
 ```text
-rag/
+RAG/
 ├── 标准RAG框架.md            # 完整架构、选型、数据格式和端到端流程
 ├── ingest_documents.py      # PDF/DOCX/MD/TXT -> 原始 documents.jsonl
 ├── prepare_cmrc2018.py      # 下载/整理公开数据集
@@ -38,6 +38,10 @@ rag/
 ├── OHR-Bench使用.md         # 混合长文档数据集的转换、建库和评测
 ├── offline_build.py         # 离线建 FAISS 索引
 ├── online_rag.py            # 在线检索并选择一种生成后端回答
+├── build_hierarchical_index.py # 构建父子层次化索引
+├── online_hierarchical_rag.py  # 父级路由后检索细粒度 Chunk
+├── build_question_index.py  # 为 Chunk 预生成问题建立索引
+├── question_retriever.py    # 原文/问题/BM25 多路召回
 ├── reranker.py              # BGE Cross-Encoder 候选重排
 ├── bm25_retriever.py        # bm25s 关键词检索
 ├── hybrid_retriever.py      # Dense + BM25 的 RRF 融合
@@ -70,9 +74,12 @@ python online_rag.py \
 和 `python-docx`：
 
 ```bash
-cd /home/lyc/workspace/rag
-/home/lyc/workspace/vllm/.venv/bin/python -m pip install -r requirements.txt
+# 从仓库根目录进入
+cd RAG
+python -m pip install -r requirements.txt
 ```
+
+如果使用已有的 vLLM 或其他虚拟环境，请先激活该环境，再执行上面的安装命令。
 
 默认 Embedding 模型是 `BAAI/bge-m3`，使用 1024 维 dense 向量，查询不添加 instruction
 前缀。第一次运行会从 Hugging Face 下载，之后会走本地缓存。Embedding 默认在 CPU 上运行；

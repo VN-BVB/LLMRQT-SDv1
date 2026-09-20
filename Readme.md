@@ -2,9 +2,9 @@
 
 # ⚡ LLM Inference Optimization Lab
 
-### Quantization · CUDA Runtime · Speculative Decoding
+### Quantization · CUDA Runtime · Speculative Decoding · RAG
 
-从 **模型量化**、**低比特算子** 到 **EAGLE / SSD 推测解码** 的端到端大模型推理优化实验仓库。
+从 **模型量化**、**低比特算子**、**EAGLE / SSD 推测解码** 到 **RAG 检索增强生成** 的端到端大模型推理实验仓库。
 
 <p>
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
@@ -31,7 +31,7 @@
     <td align="center"><b>🚀 2.46×</b><br><sub>吞吐提升</sub><br><sub>66.29 → 163.10 tok/s</sub></td>
     <td align="center"><b>💾 −52.1%</b><br><sub>引擎显存增量</sub><br><sub>4159 → 1994 MiB</sub></td>
     <td align="center"><b>✅ 1152 / 1152</b><br><sub>Token 严格一致</sub><br><sub>确定性验证路径</sub></td>
-    <td align="center"><b>🧩 3 Stages</b><br><sub>量化 → Runtime → 推测解码</sub><br><sub>端到端优化闭环</sub></td>
+    <td align="center"><b>🧩 4 Modules</b><br><sub>量化 · Runtime · 推测解码 · RAG</sub><br><sub>端到端应用闭环</sub></td>
   </tr>
 </table>
 
@@ -40,11 +40,12 @@
 
 ## 🌌 项目概览
 
-本仓库围绕 LLM 推理效率构建三层优化栈：
+本仓库围绕 LLM 推理与知识增强构建四层技术栈：
 
 1. **LLMQT**：将 FP16/BF16 模型转换为 AWQ W4A16、SmoothQuant INT8 或 FP8 模型。
 2. **LLMQRT**：使用 CUDA、CUTLASS 与 Triton 实现低比特 GEMM/GEMV 和量化模型推理。
 3. **Speculative Decoding**：实现 EAGLE-1/2/3、EAGLE3Pro 与 SSD，减少 Target Model 的串行解码轮数。
+4. **RAG**：覆盖文档摄取、切块、Dense/BM25 混合检索、Reranker、生成与端到端评测，并支持 vLLM HTTP 和本地 LLMQRT AWQ 两种生成后端。
 
 ```mermaid
 flowchart LR
@@ -62,27 +63,35 @@ flowchart LR
     E --> G
     G --> H["⚡ Faster Token Generation"]
 
+    K["📚 PDF · DOCX · Markdown · TXT"] --> I["🔎 BGE-M3 · FAISS<br/>BM25 · RRF · Reranker"]
+    Q["User Query"] --> I
+    I --> P["Retrieved Context"]
+    P --> G
+
     classDef quant fill:#6C5CE7,color:#fff,stroke:#A29BFE
     classDef runtime fill:#E17055,color:#fff,stroke:#FAB1A0
     classDef spec fill:#0984E3,color:#fff,stroke:#74B9FF
     classDef output fill:#00B894,color:#fff,stroke:#55EFC4
+    classDef rag fill:#D63031,color:#fff,stroke:#FF7675
     class B,C1,C2,C3 quant
     class D,E runtime
     class F,G spec
     class H output
+    class K,I,Q,P rag
 ```
 
 ## ✨ 核心能力
 
 | 模块 | 能力 | 关键技术 | 入口 |
 |---|---|---|---|
-| **LLMQT** | 离线权重量化与校准 | AWQ、SmoothQuant、Static/Dynamic FP8 | [`workspace/week78/LLMQT`](workspace/week78/LLMQT) |
-| **LLMQRT** | 量化模型加载与推理 | CUDA Extension、CUTLASS、Triton、低比特 GEMM/GEMV | [`workspace/week78/LLMQRT`](workspace/week78/LLMQRT) |
-| **EAGLE-1** | 静态 Top-K 候选树 | Feature-conditioned Draft、Tree Verify | [`spec_decoding/eagle`](workspace/week91011/spec-decoding-src-code/spec-decoding-main/spec_decoding/eagle) |
-| **EAGLE-2** | 动态候选树 | 累计概率 Beam、全局剪枝 | [`spec_decoding/eagle2`](workspace/week91011/spec-decoding-src-code/spec-decoding-main/spec_decoding/eagle2) |
-| **EAGLE-3** | 多层特征 Draft | Multi-layer Features、Draft Vocabulary、KV Cache | [`spec_decoding/eagle3_sgl`](workspace/week91011/spec-decoding-src-code/spec-decoding-main/spec_decoding/eagle3_sgl) |
-| **EAGLE3Pro** | 面向部署的优化实现 | Packed Verify、Flash KV、CUDA Graph、KV Compact | [`spec_decoding/eagle3pro`](workspace/week91011/spec-decoding-src-code/spec-decoding-main/spec_decoding/eagle3pro) |
-| **SSD** | Draft / Verify 并行探索 | Async Speculation、Speculation Cache、独立 CUDA Stream | [`eagle_ssd`](workspace/week91011/spec-decoding-src-code/eagle_ssd) |
+| **LLMQT** | 离线权重量化与校准 | AWQ、SmoothQuant、Static/Dynamic FP8 | [`LLMQT`](LLMQT) |
+| **LLMQRT** | 量化模型加载与推理 | CUDA Extension、CUTLASS、Triton、低比特 GEMM/GEMV | [`LLMQRT`](LLMQRT) |
+| **EAGLE-1** | 静态 Top-K 候选树 | Feature-conditioned Draft、Tree Verify | [`spec_decoding/eagle`](spec-decoding-src-code/spec-decoding-main/spec_decoding/eagle) |
+| **EAGLE-2** | 动态候选树 | 累计概率 Beam、全局剪枝 | [`spec_decoding/eagle2`](spec-decoding-src-code/spec-decoding-main/spec_decoding/eagle2) |
+| **EAGLE-3** | 多层特征 Draft | Multi-layer Features、Draft Vocabulary、KV Cache | [`spec_decoding/eagle3_sgl`](spec-decoding-src-code/spec-decoding-main/spec_decoding/eagle3_sgl) |
+| **EAGLE3Pro** | 面向部署的优化实现 | Packed Verify、Flash KV、CUDA Graph、KV Compact | [`spec_decoding/eagle3pro`](spec-decoding-src-code/spec-decoding-main/spec_decoding/eagle3pro) |
+| **SSD** | Draft / Verify 并行探索 | Async Speculation、Speculation Cache、独立 CUDA Stream | [`eagle_ssd`](spec-decoding-src-code/eagle_ssd) |
+| **RAG** | 本地知识库检索增强生成 | BGE-M3、FAISS、BM25、RRF、Cross-Encoder Reranker | [`RAG`](RAG) |
 
 ### 量化能力
 
@@ -168,37 +177,58 @@ xychart-beta
 - 三条固定 Prompt 重复三轮，完整 Token ID **1152 / 1152 严格一致**。
 - 默认 Marlin + CUDA Graph 适合吞吐优先，但临界 Argmax 可能因数值路径差异产生 Token 分叉，不能直接宣称严格无损。
 
+### RAG：混合检索与重排
+
+在 OHR-Bench 的 100 题实验中，固定 Candidate Top-50、最终 Top-5，逐步叠加 BM25、RRF 与 Reranker：
+
+| 检索阶段 | Hit@5 | Recall@5 | MRR@5 | nDCG@5 |
+|---|---:|---:|---:|---:|
+| Dense | 64.00% | 60.50% | 49.53% | 50.34% |
+| BM25 | 76.00% | 69.00% | 59.48% | 58.62% |
+| Dense + BM25 + RRF | 81.00% | 77.50% | 58.02% | 60.79% |
+| **RRF + Reranker** | **83.00%** | **80.00%** | **64.02%** | **66.00%** |
+
+- RRF + Reranker 相较 Dense 的 Hit@5 提高 **19 个百分点**。
+- 完整检索链路耗时 **433.04 ms/query**，其中 Reranker 为 **409.38 ms/query**，质量提升伴随明显延迟成本。
+- 这些结果用于记录当前实验基线，不应直接外推到其他数据集、Embedding 模型或硬件。
+- 更完整的生成质量、失败案例和实验口径见 [RAG 探索与实验记录](RAG/RAG探索与实验记录.md)。
+
 ## 🗂️ 目录结构
 
 ```text
 .
-├── README.md
-└── workspace
-    ├── week78
-    │   ├── LLMQT                       # 模型量化工具
-    │   │   └── quant
-    │   │       ├── core                # 配置与量化 API
-    │   │       ├── quantization        # AWQ / SQ / FP8
-    │   │       ├── nn_models           # 模型与量化层适配
-    │   │       ├── examples            # 量化与精度示例
-    │   │       └── utils               # 校准、Scale、Packing 工具
-    │   └── LLMQRT                      # 低比特推理 Runtime
-    │       └── runtime_refact
-    │           ├── core                # Runtime API
-    │           ├── csrc                # CUDA / C++ Kernels
-    │           ├── triton_kernels      # Triton Kernels
-    │           ├── nn_models           # Runtime 模型实现
-    │           └── example             # AWQ / SQ / FP8 示例
-    └── week91011
-        └── spec-decoding-src-code
-            ├── spec-decoding-main
-            │   └── spec_decoding
-            │       ├── eagle           # EAGLE-1
-            │       ├── eagle2          # EAGLE-2
-            │       ├── eagle3_sgl      # EAGLE-3
-            │       ├── eagle3_sgl_profile_opti
-            │       └── eagle3pro       # 部署优化版本
-            └── eagle_ssd               # Speculative Speculative Decoding
+├── Readme.md
+├── LLMQT                           # 模型量化工具
+│   └── quant
+│       ├── core                    # 配置与量化 API
+│       ├── quantization            # AWQ / SmoothQuant / FP8
+│       ├── nn_models               # 模型与量化层适配
+│       ├── examples                # 量化与精度示例
+│       └── utils                   # 校准、Scale、Packing 工具
+├── LLMQRT                          # 低比特推理 Runtime
+│   └── runtime_refact
+│       ├── core                    # Runtime API
+│       ├── csrc                    # CUDA / C++ Kernels
+│       ├── triton_kernels          # Triton Kernels
+│       ├── nn_models               # Runtime 模型实现
+│       └── example                 # AWQ / SQ / FP8 示例
+├── spec-decoding-src-code
+│   ├── spec-decoding-main
+│   │   └── spec_decoding
+│   │       ├── eagle               # EAGLE-1
+│   │       ├── eagle2              # EAGLE-2
+│   │       ├── eagle3_sgl          # EAGLE-3
+│   │       ├── eagle3_sgl_profile_opti
+│   │       └── eagle3pro           # 部署优化版本
+│   └── eagle_ssd                   # Draft / Verify 并行实验
+└── RAG
+    ├── ingest_documents.py         # PDF / DOCX / Markdown / TXT 摄取
+    ├── offline_build.py            # Chunk + BGE-M3 + FAISS 离线建库
+    ├── build_bm25.py               # BM25 关键词索引
+    ├── online_rag.py               # 检索与问答入口
+    ├── evaluate_retrieval.py       # Hit / Recall / MRR / nDCG
+    ├── evaluate_generation.py      # No-RAG / RAG 生成对照
+    └── README.md                   # RAG 完整使用说明
 ```
 
 ## 🚀 快速开始
@@ -220,7 +250,7 @@ xychart-beta
 ### 2. LLMQT：生成量化模型
 
 ```bash
-cd workspace/week78/LLMQT
+cd LLMQT
 
 python -m pip install -r requirements.txt
 python setup_quant.py install
@@ -244,7 +274,7 @@ quant/examples/fp8_dyn_quantize.py      Dynamic FP8
 ### 3. LLMQRT：编译低比特 CUDA Runtime
 
 ```bash
-cd workspace/week78/LLMQRT
+cd LLMQRT
 
 python -m pip install -r requirements.txt
 python setup_runtime.py install
@@ -258,7 +288,7 @@ python runtime_refact/example/awq_run_qwen3.py
 ### 4. EAGLE3Pro：运行推测解码
 
 ```bash
-cd workspace/week91011/spec-decoding-src-code/spec-decoding-main
+cd spec-decoding-src-code/spec-decoding-main
 
 python -m pip install -e spec_decoding/eagle3pro
 
@@ -279,7 +309,7 @@ CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python -m \
 ### 5. SSD：Draft / Verify 并行实验
 
 ```bash
-cd workspace/week91011/spec-decoding-src-code/eagle_ssd
+cd spec-decoding-src-code/eagle_ssd
 
 uv sync
 source .venv/bin/activate
@@ -293,6 +323,50 @@ python -O bench.py --llama --size 70 --gpus 5 --spec --async \
   --k 7 --f 3 --b 1 --numseqs 128 --output_len 512 --all
 ```
 
+### 6. RAG：构建本地知识库并检索问答
+
+RAG 默认使用 `BAAI/bge-m3` 生成 Dense Embedding，以 FAISS 保存向量索引；还可组合 BM25、RRF 与 Cross-Encoder Reranker。生成阶段既可连接 vLLM 的 OpenAI-compatible API，也可直接加载本仓库 LLMQRT 量化出的 AWQ Checkpoint。
+
+下面是使用自有 PDF、DOCX、Markdown 或 TXT 文件的最短流程：
+
+```bash
+cd RAG
+
+python -m pip install -r requirements.txt
+
+# 统一文档格式并建立 Dense 索引；首次运行会下载 BGE-M3
+python ingest_documents.py /path/to/documents \
+  --output data/custom/documents.jsonl
+python offline_build.py \
+  --documents data/custom/documents.jsonl \
+  --output-dir storage/custom_bge_m3
+
+# 先只检查召回结果，不加载生成模型
+python online_rag.py \
+  --index-dir storage/custom_bge_m3 \
+  --retrieve-only --show-context \
+  --question "你的问题"
+```
+
+需要生成答案时，移除 `--retrieve-only`，并选择一种后端：
+
+```bash
+# 使用已启动的 vLLM 服务（默认 http://127.0.0.1:8000/v1）
+python online_rag.py \
+  --index-dir storage/custom_bge_m3 \
+  --backend vllm --question "你的问题"
+
+# 或直接加载本地 LLMQRT AWQ Checkpoint
+python online_rag.py \
+  --index-dir storage/custom_bge_m3 \
+  --backend local-awq \
+  --awq-model /path/to/awq-checkpoint \
+  --llmqrt-root ../LLMQRT \
+  --question "你的问题"
+```
+
+OHR-Bench 数据准备、Dense + BM25 + RRF 混合检索、Reranker、层次化/问题索引及完整评测方式见 [RAG 使用说明](RAG/README.md)；架构与数据格式见 [标准 RAG 框架](RAG/标准RAG框架.md)。
+
 ## 🧪 验证方法
 
 性能数字只有在测试口径一致时才有意义。本项目重点记录以下指标：
@@ -304,6 +378,8 @@ python -O bench.py --llama --size 70 --gpus 5 --spec --async \
 | 吞吐 | Tokens/s、Acceptance Length、Rounds |
 | 显存 | Checkpoint Size、引擎驻留显存增量、KV Cache |
 | Kernel | CUDA Event、Torch Profiler、Chrome Trace |
+| RAG 检索 | Hit@K、Recall@K、MRR@K、nDCG@K、检索延迟 |
+| RAG 生成 | No-RAG / RAG 的 EM、字符级 F1 与人工抽查 |
 
 推荐遵循以下基准原则：
 
@@ -312,6 +388,8 @@ python -O bench.py --llama --size 70 --gpus 5 --spec --async \
 - 将“吞吐优先”和“严格确定性”作为两种配置分别报告。
 - 不把 AWQ、Marlin、CUDA Graph 与 EAGLE3 的收益重复归因。
 - 不将 batch=1、短上下文结果直接外推至高并发或长上下文服务。
+- RAG 实验固定数据集、生成模型与 Prompt，每次只改变 Chunk、召回、重排或 Top-K 中的一项。
+- 先验证检索指标，再比较同一生成后端的 No-RAG / RAG 答案，避免把召回收益与模型差异混在一起。
 
 ## 🧭 Roadmap
 
@@ -321,7 +399,10 @@ python -O bench.py --llama --size 70 --gpus 5 --spec --async \
 - [x] EAGLE3Pro + vLLM + AWQ Marlin 集成
 - [x] CUDA Graph、Static KV Cache 与 Packed Verify
 - [x] SSD 异步调度与 Speculation Cache 探索
-- [ ] Multi Lora训练，调度
+- [x] 本地 RAG：文档摄取、BGE-M3、FAISS 与生成后端
+- [x] Dense + BM25 + RRF、Reranker 与检索/生成评测
+- [x] 层次化检索与问题索引实验
+- [ ] Multi-LoRA 训练与调度
 - [ ] 多 Batch / Continuous Batching 系统化基准
 - [ ] 长上下文与多并发参数扫描
 - [ ] OpenAI-compatible Serving API
@@ -333,8 +414,9 @@ python -O bench.py --llama --size 70 --gpus 5 --spec --async \
 
 - 部分脚本中的模型路径、设备编号和缓存路径需要按本机环境修改。
 - 不同 GPU、CUDA、PyTorch、Transformers 与 vLLM 版本可能产生性能或数值差异。
+- RAG 首次运行需要下载 Embedding/Reranker 模型；模型权重、数据集和运行生成的 `data/`、`storage/`、`results/` 不随仓库提供。
 - 仓库包含 CUTLASS 等第三方源码；公开发布前请保留其原始版权声明并检查各依赖许可证。
-- 当前仓库尚未声明统一开源许可证。若计划接受外部贡献，建议在发布前补充根目录 `LICENSE`。
+- 本仓库代码许可见根目录 [`LICENSE`](LICENSE)；第三方源码、模型与数据集仍分别遵循其原始许可证。
 
 ## 🤝 Contributing
 欢迎提交 Issue 或 Pull Request。若贡献新的 Kernel 或性能结果，请同时提供：
