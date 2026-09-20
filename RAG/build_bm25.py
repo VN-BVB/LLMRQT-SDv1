@@ -1,4 +1,4 @@
-"""从现有 chunks.jsonl 建立 SQLite FTS5/BM25 离线索引。"""
+"""从现有 chunks.jsonl 建立 bm25s 离线关键词索引。"""
 
 from __future__ import annotations
 

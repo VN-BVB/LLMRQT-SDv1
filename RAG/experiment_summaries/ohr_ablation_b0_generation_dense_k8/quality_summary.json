@@ -1,0 +1,15 @@
+{
+  "question_count": 100,
+  "judge_model": "qwen3-1.7b-awq",
+  "judge_backend": "vllm",
+  "faithfulness": 0.7966666666666666,
+  "hallucination_rate": 0.20333333333333337,
+  "answer_relevance": 0.77,
+  "answer_correctness_judge": 0.68,
+  "answer_f1": 0.4047404803005987,
+  "f1_faithfulness_hmean": 0.5367759799333527,
+  "parse_failure_count": 0,
+  "scored_faithfulness_count": 100,
+  "method": "claim-level LLM-as-a-judge, RAGAS-style faithfulness",
+  "caveat": "本地 Qwen judge 与被评模型相同时存在自评偏差；正式报告应固定 judge prompt，并人工复核随机样本。"
+}

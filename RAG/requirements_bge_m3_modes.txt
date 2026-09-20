@@ -1,0 +1,3 @@
+# BGE-M3 Dense/Sparse/ColBERT 消融实验的可选依赖。
+# 建议在独立虚拟环境安装，避免其扩展依赖改变现有 vLLM 环境。
+FlagEmbedding==1.4.2

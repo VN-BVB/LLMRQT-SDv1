@@ -31,12 +31,14 @@
     <td align="center"><b>🚀 2.46×</b><br><sub>吞吐提升</sub><br><sub>66.29 → 163.10 tok/s</sub></td>
     <td align="center"><b>💾 −52.1%</b><br><sub>引擎显存增量</sub><br><sub>4159 → 1994 MiB</sub></td>
     <td align="center"><b>✅ 1152 / 1152</b><br><sub>Token 严格一致</sub><br><sub>确定性验证路径</sub></td>
-    <td align="center"><b>🧩 4 Modules</b><br><sub>量化 · Runtime · 推测解码 · RAG</sub><br><sub>端到端应用闭环</sub></td>
+    <td align="center"><b>🧠 40.47%</b><br><sub>RAG Answer F1</sub><br><sub>Hit@8 86.00% · Faithfulness 79.67%</sub></td>
   </tr>
 </table>
 
 > [!NOTE]
 > 上述吞吐与显存数据来自 RTX 4060 Laptop、Qwen3-1.7B、batch=1、固定生成 128 tokens 的吞吐优先配置。严格 Token 一致性来自另一组 batch-invariant + eager 配置；两组结果不可混为同一测试设置。详见[性能亮点](#-性能亮点)。
+>
+> RAG 数据来自 OHR-Bench 固定 100 题、Candidate Top-50、最终 Top-8、Qwen3-1.7B AWQ 的同后端消融。Faithfulness 由同一个 1.7B 模型担任 Judge，存在自评偏差，需用独立 Judge 或人工抽检复核。
 
 ## 🌌 项目概览
 
@@ -45,7 +47,7 @@
 1. **LLMQT**：将 FP16/BF16 模型转换为 AWQ W4A16、SmoothQuant INT8 或 FP8 模型。
 2. **LLMQRT**：使用 CUDA、CUTLASS 与 Triton 实现低比特 GEMM/GEMV 和量化模型推理。
 3. **Speculative Decoding**：实现 EAGLE-1/2/3、EAGLE3Pro 与 SSD，减少 Target Model 的串行解码轮数。
-4. **RAG**：覆盖文档摄取、切块、Dense/BM25 混合检索、Reranker、生成与端到端评测，并支持 vLLM HTTP 和本地 LLMQRT AWQ 两种生成后端。
+4. **RAG**：覆盖文档摄取、切块、Dense 检索、Reranker、生成、Faithfulness 与端到端评测；BM25/RRF、层次化检索、预设问题和查询变换作为可切换消融模块，并支持 vLLM HTTP 和本地 LLMQRT AWQ 两种生成后端。
 
 ```mermaid
 flowchart LR
@@ -63,8 +65,9 @@ flowchart LR
     E --> G
     G --> H["⚡ Faster Token Generation"]
 
-    K["📚 PDF · DOCX · Markdown · TXT"] --> I["🔎 BGE-M3 · FAISS<br/>BM25 · RRF · Reranker"]
+    K["📚 PDF · DOCX · Markdown · TXT"] --> I["🔎 BGE-M3 · FAISS<br/>Top-50 → Reranker → Top-8"]
     Q["User Query"] --> I
+    X["🧪 Optional Ablations<br/>BM25 · Hierarchy · Query Transform"] -.-> I
     I --> P["Retrieved Context"]
     P --> G
 
@@ -77,7 +80,7 @@ flowchart LR
     class D,E runtime
     class F,G spec
     class H output
-    class K,I,Q,P rag
+    class K,I,Q,P,X rag
 ```
 
 ## ✨ 核心能力
@@ -91,7 +94,7 @@ flowchart LR
 | **EAGLE-3** | 多层特征 Draft | Multi-layer Features、Draft Vocabulary、KV Cache | [`spec_decoding/eagle3_sgl`](spec-decoding-src-code/spec-decoding-main/spec_decoding/eagle3_sgl) |
 | **EAGLE3Pro** | 面向部署的优化实现 | Packed Verify、Flash KV、CUDA Graph、KV Compact | [`spec_decoding/eagle3pro`](spec-decoding-src-code/spec-decoding-main/spec_decoding/eagle3pro) |
 | **SSD** | Draft / Verify 并行探索 | Async Speculation、Speculation Cache、独立 CUDA Stream | [`eagle_ssd`](spec-decoding-src-code/eagle_ssd) |
-| **RAG** | 本地知识库检索增强生成 | BGE-M3、FAISS、BM25、RRF、Cross-Encoder Reranker | [`RAG`](RAG) |
+| **RAG** | 本地知识库检索、生成与严格消融 | BGE-M3、FAISS、Cross-Encoder Reranker、Faithfulness Judge、可选 BM25/RRF/层次化/查询变换 | [`RAG`](RAG) |
 
 ### 量化能力
 
@@ -177,21 +180,29 @@ xychart-beta
 - 三条固定 Prompt 重复三轮，完整 Token ID **1152 / 1152 严格一致**。
 - 默认 Marlin + CUDA Graph 适合吞吐优先，但临界 Argmax 可能因数值路径差异产生 Token 分叉，不能直接宣称严格无损。
 
-### RAG：混合检索与重排
+### RAG：全链路分阶段消融
 
-在 OHR-Bench 的 100 题实验中，固定 Candidate Top-50、最终 Top-5，逐步叠加 BM25、RRF 与 Reranker：
+数据集为 OHR-Bench（8,259 个有效页面、8,456 条可评测问题）。主实验固定前 100 题、Candidate Top-50、最终 Top-8、`BAAI/bge-reranker-v2-m3`、Qwen3-1.7B W4A16 AWQ 与最大生成 64 tokens；检索、生成、事实性和延迟分别报告。
 
-| 检索阶段 | Hit@5 | Recall@5 | MRR@5 | nDCG@5 |
-|---|---:|---:|---:|---:|
-| Dense | 64.00% | 60.50% | 49.53% | 50.34% |
-| BM25 | 76.00% | 69.00% | 59.48% | 58.62% |
-| Dense + BM25 + RRF | 81.00% | 77.50% | 58.02% | 60.79% |
-| **RRF + Reranker** | **83.00%** | **80.00%** | **64.02%** | **66.00%** |
+| 路径 | Hit@8 | Recall@8 | MRR@8 | nDCG@8 | EM | Answer F1 |
+|---|---:|---:|---:|---:|---:|---:|
+| **B0 Dense FAISS + Reranker** | **86.00%** | **83.00%** | 64.69% | 66.18% | 14.00% | **40.47%** |
+| E1 Dense + BM25 + RRF + Reranker | 85.00% | 81.50% | 63.85% | 65.23% | 13.00% | 39.61% |
+| E2 Parent Summary → Child，仅文本 | 79.00% | 76.50% | 62.67% | 63.70% | 14.00% | 33.97% |
+| E3 E2 + 父子预设问题 | 84.00% | 81.50% | **66.07%** | **67.41%** | **15.00%** | 36.82% |
 
-- RRF + Reranker 相较 Dense 的 Hit@5 提高 **19 个百分点**。
-- 完整检索链路耗时 **433.04 ms/query**，其中 Reranker 为 **409.38 ms/query**，质量提升伴随明显延迟成本。
-- 这些结果用于记录当前实验基线，不应直接外推到其他数据集、Embedding 模型或硬件。
-- 更完整的生成质量、失败案例和实验口径见 [RAG 探索与实验记录](RAG/RAG探索与实验记录.md)。
+| 路径 | Faithfulness | 幻觉率 | Judge 正确性 | F1–Faithfulness H-mean | 检索 | 端到端 |
+|---|---:|---:|---:|---:|---:|---:|
+| **B0** | **79.67%** | **20.33%** | 68.00% | **53.68%** | 370.8 ms/问 | 603.2 ms/问 |
+| E1 | 76.50% | 23.50% | 67.00% | 52.20% | **338.2 ms/问** | **541.7 ms/问** |
+| E2 | 75.50% | 24.50% | 67.50% | 46.86% | 776.8 ms/问 | 1073.1 ms/问 |
+| E3 | 75.50% | 24.50% | **69.00%** | 49.50% | 1181.0 ms/问 | 1474.4 ms/问 |
+
+当前默认选择 **B0：BGE-M3 Dense FAISS Top-50 → Reranker → Top-8**。它在这轮同口径实验中取得最高 Answer F1 和 H-mean；小语料上表现较好的 BM25 在完整 100 题复验中未超过纯 Dense，因此降为可选路由。E3 虽把层次化方案的 nDCG@8 提升至 67.41%，但 Answer F1 只有 36.82%，端到端延迟增至 1474.4 ms/问，不进入默认路径。
+
+查询变换实验中，“原始 Query + Rewrite + Step-back + Decomposition”将 E1 的 Faithfulness 从 **76.50% 提升至 82.00%**、幻觉率从 **23.50% 降至 18.00%**，但 Answer F1 基本持平（39.61% → 39.55%），端到端延迟增加 **136.4 ms/问**。由于回答模型和 Judge 均为 Qwen3-1.7B，该事实性收益暂列为待独立 Judge 复验的候选结果。
+
+完整实验设计、命令、失败配置与统计口径见 [RAG 使用说明](RAG/README.md)；背景过程见 [RAG 探索与实验记录](RAG/RAG探索与实验记录.md)。仓库保留的可复核数值位于 [`RAG/experiment_summaries`](RAG/experiment_summaries)。
 
 ## 🗂️ 目录结构
 
@@ -228,6 +239,10 @@ xychart-beta
     ├── online_rag.py               # 检索与问答入口
     ├── evaluate_retrieval.py       # Hit / Recall / MRR / nDCG
     ├── evaluate_generation.py      # No-RAG / RAG 生成对照
+    ├── evaluate_faithfulness.py    # 忠实度、幻觉率与 LLM Judge 评测
+    ├── build_hierarchical_index.py # Parent Summary → Child 层次化索引
+    ├── generate_query_variants.py  # Rewrite / Step-back / Decomposition
+    ├── experiment_summaries        # README 结论对应的精简 JSON 摘要
     └── README.md                   # RAG 完整使用说明
 ```
 
@@ -325,7 +340,7 @@ python -O bench.py --llama --size 70 --gpus 5 --spec --async \
 
 ### 6. RAG：构建本地知识库并检索问答
 
-RAG 默认使用 `BAAI/bge-m3` 生成 Dense Embedding，以 FAISS 保存向量索引；还可组合 BM25、RRF 与 Cross-Encoder Reranker。生成阶段既可连接 vLLM 的 OpenAI-compatible API，也可直接加载本仓库 LLMQRT 量化出的 AWQ Checkpoint。
+RAG 使用 `BAAI/bge-m3` 生成 Dense Embedding，以 FAISS 保存向量索引。当前质量默认路径是 Dense Top-50 → `BAAI/bge-reranker-v2-m3` → Top-8；BM25/RRF、层次化检索和查询变换保留为实验开关。生成阶段既可连接 vLLM 的 OpenAI-compatible API，也可直接加载本仓库 LLMQRT 量化出的 AWQ Checkpoint。
 
 下面是使用自有 PDF、DOCX、Markdown 或 TXT 文件的最短流程：
 
@@ -341,7 +356,7 @@ python offline_build.py \
   --documents data/custom/documents.jsonl \
   --output-dir storage/custom_bge_m3
 
-# 先只检查召回结果，不加载生成模型
+# 最小冒烟：先只检查 Dense 召回，不加载生成模型
 python online_rag.py \
   --index-dir storage/custom_bge_m3 \
   --retrieve-only --show-context \
@@ -351,10 +366,12 @@ python online_rag.py \
 需要生成答案时，移除 `--retrieve-only`，并选择一种后端：
 
 ```bash
-# 使用已启动的 vLLM 服务（默认 http://127.0.0.1:8000/v1）
+# 推荐质量版：Dense Top-50 → Reranker → Top-8，再交给 vLLM 生成
 python online_rag.py \
   --index-dir storage/custom_bge_m3 \
-  --backend vllm --question "你的问题"
+  --backend vllm \
+  --reranker --candidate-k 50 --top-k 8 \
+  --question "你的问题"
 
 # 或直接加载本地 LLMQRT AWQ Checkpoint
 python online_rag.py \
@@ -362,10 +379,12 @@ python online_rag.py \
   --backend local-awq \
   --awq-model /path/to/awq-checkpoint \
   --llmqrt-root ../LLMQRT \
+  --reranker --reranker-device cpu \
+  --candidate-k 50 --top-k 8 \
   --question "你的问题"
 ```
 
-OHR-Bench 数据准备、Dense + BM25 + RRF 混合检索、Reranker、层次化/问题索引及完整评测方式见 [RAG 使用说明](RAG/README.md)；架构与数据格式见 [标准 RAG 框架](RAG/标准RAG框架.md)。
+OHR-Bench 数据准备、Dense/BM25/RRF 消融、Reranker、Faithfulness Judge、层次化/问题索引、查询变换及完整评测方式见 [RAG 使用说明](RAG/README.md)；架构与数据格式见 [标准 RAG 框架](RAG/标准RAG框架.md)。
 
 ## 🧪 验证方法
 
@@ -379,7 +398,7 @@ OHR-Bench 数据准备、Dense + BM25 + RRF 混合检索、Reranker、层次化/
 | 显存 | Checkpoint Size、引擎驻留显存增量、KV Cache |
 | Kernel | CUDA Event、Torch Profiler、Chrome Trace |
 | RAG 检索 | Hit@K、Recall@K、MRR@K、nDCG@K、检索延迟 |
-| RAG 生成 | No-RAG / RAG 的 EM、字符级 F1 与人工抽查 |
+| RAG 生成 | No-RAG / RAG 的 EM、字符级 F1、Faithfulness、幻觉率、Judge 相关性/正确性与人工抽查 |
 
 推荐遵循以下基准原则：
 
@@ -402,6 +421,9 @@ OHR-Bench 数据准备、Dense + BM25 + RRF 混合检索、Reranker、层次化/
 - [x] 本地 RAG：文档摄取、BGE-M3、FAISS 与生成后端
 - [x] Dense + BM25 + RRF、Reranker 与检索/生成评测
 - [x] 层次化检索与问题索引实验
+- [x] Rewrite / Step-back / Decomposition 查询变换消融
+- [x] Faithfulness、幻觉率与质量—延迟联合评测
+- [ ] 使用独立 Qwen3-32B Judge 复核事实性结论
 - [ ] Multi-LoRA 训练与调度
 - [ ] 多 Batch / Continuous Batching 系统化基准
 - [ ] 长上下文与多并发参数扫描

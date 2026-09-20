@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+import gc
 import re
 from pathlib import Path
 from typing import Any, Iterable
@@ -19,6 +20,19 @@ from typing import Any, Iterable
 # BGE-M3 的 dense 检索不要求给查询添加 instruction 前缀。
 DEFAULT_EMBEDDING_MODEL = "BAAI/bge-m3"
 DEFAULT_QUERY_PREFIX = ""
+_FAISS_GPU_RESOURCES: dict[int, Any] = {}
+
+
+def get_faiss_gpu_resources(faiss: Any, device_id: int = 0) -> Any:
+    """同一 GPU 上的多个索引共享 scratch buffer，避免每个索引重复预留显存。"""
+
+    resource = _FAISS_GPU_RESOURCES.get(device_id)
+    if resource is None:
+        resource = faiss.StandardGpuResources()
+        # OHR 的 Flat 索引很小，256 MiB scratch 足够；默认预留在 8 GiB 卡上过大。
+        resource.setTempMemory(256 * 1024 * 1024)
+        _FAISS_GPU_RESOURCES[device_id] = resource
+    return resource
 
 
 def detect_heading(line: str) -> tuple[int, str] | None:
@@ -211,7 +225,13 @@ class BGEEmbedder:
         self.query_prefix = query_prefix
         self.max_length = max_length
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModel.from_pretrained(model_name).to(device)
+        model_kwargs: dict[str, Any] = {}
+        if str(device).startswith("cuda"):
+            model_kwargs["dtype"] = torch.float16
+            self.dtype = "float16"
+        else:
+            self.dtype = "float32"
+        self.model = AutoModel.from_pretrained(model_name, **model_kwargs).to(device)
         self.model.eval()
 
     def encode(
@@ -265,6 +285,17 @@ class BGEEmbedder:
 
         return np.ascontiguousarray(np.concatenate(all_embeddings, axis=0), dtype="float32")
 
+    def unload(self) -> None:
+        """释放 BGE 权重；已编码为 NumPy 的查询向量仍可继续用于 FAISS。"""
+
+        if hasattr(self, "model"):
+            del self.model
+        if hasattr(self, "tokenizer"):
+            del self.tokenizer
+        gc.collect()
+        if self.device == "cuda" and self.torch.cuda.is_available():
+            self.torch.cuda.empty_cache()
+
 
 class FaissRetriever:
     """加载离线生成的 FAISS 索引，并执行在线向量检索。"""
@@ -288,11 +319,26 @@ class FaissRetriever:
             self.meta = json.load(file)
 
         self.chunks = read_jsonl(index_dir / "chunks.jsonl")
-        self.index = faiss.read_index(str(index_dir / "index.faiss"))
-        if self.index.ntotal != len(self.chunks):
+        self.cpu_index = faiss.read_index(str(index_dir / "index.faiss"))
+        if self.cpu_index.ntotal != len(self.chunks):
             raise ValueError(
-                f"索引有 {self.index.ntotal} 条向量，但 chunks.jsonl 有 {len(self.chunks)} 行"
+                f"索引有 {self.cpu_index.ntotal} 条向量，但 chunks.jsonl 有 {len(self.chunks)} 行"
             )
+
+        # device=cuda 同时控制 BGE 编码和 FAISS 搜索。过滤检索仍保留 CPU
+        # IndexFlatIP，因为 IDSelector 的支持在不同 GPU FAISS 版本间并不一致。
+        self.index_device = "cpu"
+        self.index = self.cpu_index
+        self.gpu_resources = None
+        if device == "cuda":
+            if not hasattr(faiss, "StandardGpuResources"):
+                raise RuntimeError(
+                    "--embedding-device cuda 已请求 GPU FAISS，但当前安装是 faiss-cpu；"
+                    "请安装官方 faiss-gpu 后重试"
+                )
+            self.gpu_resources = get_faiss_gpu_resources(faiss, 0)
+            self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, self.cpu_index)
+            self.index_device = "cuda:0"
 
         if embedder is not None:
             expected_model = embedding_model or self.meta["embedding_model"]
@@ -399,7 +445,7 @@ class FaissRetriever:
             selector = faiss.IDSelectorBatch(ids)
             params = faiss.SearchParameters()
             params.sel = selector
-            scores, indices = self.index.search(
+            scores, indices = self.cpu_index.search(
                 np.ascontiguousarray(vector[None, :], dtype="float32"),
                 min(top_k, len(ids)),
                 params=params,

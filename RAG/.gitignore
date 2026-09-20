@@ -1,0 +1,20 @@
+# 下载/转换的数据、模型向量和评测输出都可以重新生成，不提交到 Git。
+data/raw/
+data/ohr_bench/
+data/cmrc2018/
+data/custom/
+storage/
+results/
+__pycache__/
+*.pyc
+
+# 模型、向量、公开数据原文件和断点文件。
+*.bin
+*.safetensors
+*.faiss
+*.parquet
+*.partial.jsonl
+
+# 本地打包产物。
+*.zip
+*.7z

@@ -9,7 +9,7 @@ from typing import Any
 
 import numpy as np
 
-from rag_core import BGEEmbedder, read_jsonl, write_json
+from rag_core import BGEEmbedder, get_faiss_gpu_resources, read_jsonl, write_json
 
 
 def build_question_faiss_index(
@@ -70,6 +70,7 @@ def build_question_faiss_index(
         "question_count": len(question_texts),
         "mapping_order": "chunk_line_then_generated_question_order",
         "embedding_model": model_name,
+        "embedding_dtype": embedder.dtype,
         "embedding_dimension": int(vectors.shape[1]),
         "embedding_max_length": embedding_max_length,
         "query_prefix": chunk_meta.get("query_prefix", ""),
@@ -103,8 +104,8 @@ class QuestionFaissRetriever:
             self.meta = json.load(file)
         self.chunks = chunks if chunks is not None else read_jsonl(index_dir / "chunks.jsonl")
         self.chunk_indices = np.load(question_index / "question_chunk_indices.npy", mmap_mode="r")
-        self.index = faiss.read_index(str(question_index / "index.faiss"))
-        if self.index.ntotal != len(self.chunk_indices):
+        self.cpu_index = faiss.read_index(str(question_index / "index.faiss"))
+        if self.cpu_index.ntotal != len(self.chunk_indices):
             raise ValueError("问题 FAISS 向量数与 question_chunk_indices.npy 长度不一致")
         if int(self.meta["chunk_count"]) != len(self.chunks):
             raise ValueError("问题索引记录的 Chunk 数与当前 chunks.jsonl 不一致")
@@ -114,6 +115,18 @@ class QuestionFaissRetriever:
             query_prefix=self.meta.get("query_prefix", ""),
             max_length=int(self.meta.get("embedding_max_length", 1024)),
         )
+        effective_device = str(getattr(self.embedder, "device", device))
+        self.index_device = "cpu"
+        self.index = self.cpu_index
+        self.gpu_resources = None
+        if effective_device.startswith("cuda"):
+            if not hasattr(faiss, "StandardGpuResources"):
+                raise RuntimeError(
+                    "已请求 CUDA 检索，但当前安装是 faiss-cpu；请安装官方 faiss-gpu"
+                )
+            self.gpu_resources = get_faiss_gpu_resources(faiss, 0)
+            self.index = faiss.index_cpu_to_gpu(self.gpu_resources, 0, self.cpu_index)
+            self.index_device = "cuda:0"
 
     def search_many(
         self,
@@ -217,7 +230,7 @@ class QuestionFaissRetriever:
             params.sel = selector
             # 同一 Child 可能有多个问题，多取一些再折叠为唯一 Child。
             fetch_k = min(len(ids), max(top_k * 3, top_k))
-            scores, indices = self.index.search(
+            scores, indices = self.cpu_index.search(
                 np.ascontiguousarray(vector[None, :], dtype="float32"),
                 fetch_k,
                 params=params,

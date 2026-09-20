@@ -1,0 +1,68 @@
+{
+  "mode": "hierarchical_parent_summary_child_text_bm25_rrf",
+  "question_count": 100,
+  "parameters": {
+    "limit": 100,
+    "top_k": 8,
+    "candidate_k": 50,
+    "dense_k": 50,
+    "parent_route_k": 50,
+    "parent_candidate_k": 50,
+    "parent_k": 30,
+    "child_route_k": 50,
+    "child_scope": "exact_parent_filtered_search",
+    "rrf_k": 60,
+    "generated_question_routes": false,
+    "embedding_device": "cuda",
+    "faiss_parent_text_device": "cuda:0",
+    "faiss_parent_question_device": "disabled",
+    "faiss_child_text_device": "cuda:0",
+    "faiss_child_question_device": "disabled",
+    "reranker_model": "BAAI/bge-reranker-v2-m3",
+    "reranker_device": "cuda",
+    "reranker_batch_size": 8,
+    "reranker_max_length": 512
+  },
+  "timing": {
+    "parent_text_dense_seconds": 0.6513225710004917,
+    "parent_question_dense_seconds": 0.0,
+    "parent_bm25_seconds": 0.051394140000411426,
+    "parent_rrf_seconds": 0.008159179000358563,
+    "parent_reranker_seconds": 33.29727606100005,
+    "dense_seconds": 0.02983502999995835,
+    "question_dense_seconds": 0.0,
+    "expanded_bm25_seconds": 0.047878585000034946,
+    "rrf_seconds": 0.017309204000412137,
+    "reranker_seconds": 76.88718387300014,
+    "child_rrf_seconds": 0.009150025000053574,
+    "child_reranker_seconds": 43.58990781200009,
+    "retrieval_pipeline_seconds": 77.68492340300145,
+    "retrieval_pipeline_ms_per_query": 776.8492340300145
+  },
+  "hierarchical_quality": {
+    "parent_k": 30,
+    "candidate_k": 50,
+    "final_k": 8,
+    "parent": {
+      "hit_at_k": 0.85,
+      "precision_at_k": 0.03666666666666667,
+      "recall_at_k": 0.835,
+      "mrr_at_k": 0.4969398277161436,
+      "ndcg_at_k": 0.5520031320235776
+    },
+    "candidate": {
+      "hit_at_k": 0.85,
+      "precision_at_k": 0.022000000000000016,
+      "recall_at_k": 0.835,
+      "mrr_at_k": 0.6143882783882784,
+      "ndcg_at_k": 0.6448962003170835
+    },
+    "final": {
+      "hit_at_k": 0.79,
+      "precision_at_k": 0.1275,
+      "recall_at_k": 0.765,
+      "mrr_at_k": 0.6266785714285714,
+      "ndcg_at_k": 0.6370303061658162
+    }
+  }
+}

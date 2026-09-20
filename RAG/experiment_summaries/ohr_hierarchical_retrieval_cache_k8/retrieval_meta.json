@@ -1,0 +1,67 @@
+{
+  "mode": "hierarchical_parent_child_text_question_bm25_rrf",
+  "question_count": 100,
+  "parameters": {
+    "limit": 100,
+    "top_k": 8,
+    "candidate_k": 50,
+    "dense_k": 50,
+    "parent_route_k": 50,
+    "parent_candidate_k": 50,
+    "parent_k": 8,
+    "child_route_k": 50,
+    "child_scope": "exact_parent_filtered_search",
+    "rrf_k": 60,
+    "embedding_device": "cuda",
+    "faiss_parent_text_device": "cuda:0",
+    "faiss_parent_question_device": "cuda:0",
+    "faiss_child_text_device": "cuda:0",
+    "faiss_child_question_device": "cuda:0",
+    "reranker_model": "BAAI/bge-reranker-v2-m3",
+    "reranker_device": "cuda",
+    "reranker_batch_size": 8,
+    "reranker_max_length": 512
+  },
+  "timing": {
+    "parent_text_dense_seconds": 0.6733821749999152,
+    "parent_question_dense_seconds": 0.011451588999989326,
+    "parent_bm25_seconds": 0.0680340209996757,
+    "parent_rrf_seconds": 0.013816407999911462,
+    "parent_reranker_seconds": 54.69130929399989,
+    "dense_seconds": 0.02667404900012116,
+    "question_dense_seconds": 0.04903728699991916,
+    "expanded_bm25_seconds": 0.07264908199977071,
+    "rrf_seconds": 0.023046168999826477,
+    "reranker_seconds": 101.22894446999953,
+    "child_rrf_seconds": 0.009229760999915015,
+    "child_reranker_seconds": 46.53763517599964,
+    "retrieval_pipeline_seconds": 102.15321884199875,
+    "retrieval_pipeline_ms_per_query": 1021.5321884199875
+  },
+  "hierarchical_quality": {
+    "parent_k": 8,
+    "candidate_k": 50,
+    "final_k": 8,
+    "parent": {
+      "hit_at_k": 0.74,
+      "precision_at_k": 0.11875,
+      "recall_at_k": 0.705,
+      "mrr_at_k": 0.4966190476190478,
+      "ndcg_at_k": 0.5236724841373885
+    },
+    "candidate": {
+      "hit_at_k": 0.74,
+      "precision_at_k": 0.019000000000000013,
+      "recall_at_k": 0.705,
+      "mrr_at_k": 0.6009119047619048,
+      "ndcg_at_k": 0.6033712695565611
+    },
+    "final": {
+      "hit_at_k": 0.71,
+      "precision_at_k": 0.11375,
+      "recall_at_k": 0.67,
+      "mrr_at_k": 0.627,
+      "ndcg_at_k": 0.6103576378683205
+    }
+  }
+}

@@ -35,25 +35,34 @@ def exact_match(prediction: str, answers: list[str]) -> float:
     return float(any(normalized == normalize_answer(answer) for answer in answers))
 
 
-def character_f1(prediction: str, answers: list[str]) -> float:
-    """中文常用字级 F1；取多个标准答案中的最高分。"""
+def character_prf(prediction: str, answers: list[str]) -> tuple[float, float, float]:
+    """字符级 Precision/Recall/F1；以多个标准答案中 F1 最高的一组为准。"""
 
     predicted = list(normalize_answer(prediction))
-    best = 0.0
+    best = (0.0, 0.0, 0.0)
     for answer in answers:
         gold = list(normalize_answer(answer))
         common = Counter(predicted) & Counter(gold)
         same = sum(common.values())
         if not predicted or not gold:
             score = float(predicted == gold)
+            current = (score, score, score)
         elif same == 0:
-            score = 0.0
+            current = (0.0, 0.0, 0.0)
         else:
             precision = same / len(predicted)
             recall = same / len(gold)
             score = 2 * precision * recall / (precision + recall)
-        best = max(best, score)
+            current = (precision, recall, score)
+        if current[2] > best[2]:
+            best = current
     return best
+
+
+def character_f1(prediction: str, answers: list[str]) -> float:
+    """保留原有接口，便于和历史实验的字符级 F1 直接比较。"""
+
+    return character_prf(prediction, answers)[2]
 
 
 def clean_model_answer(text: str) -> str:
@@ -78,6 +87,48 @@ def ndcg_at_k(retrieved_doc_ids: list[str], gold_doc_ids: set[str], k: int) -> f
     ideal_count = min(len(gold_doc_ids), k)
     ideal_dcg = sum(1.0 / math.log2(rank + 1) for rank in range(1, ideal_count + 1))
     return dcg / ideal_dcg if ideal_dcg else 0.0
+
+
+def retrieval_metrics_at_k(
+    retrieved_doc_ids: list[str], gold_doc_ids: set[str], k: int
+) -> dict[str, float]:
+    """按证据页 ID 计算标准检索指标；同一页的重复 Child 只记一次相关。"""
+
+    if not gold_doc_ids:
+        raise ValueError("gold_doc_ids 不能为空")
+    seen: set[str] = set()
+    relevant_count = 0
+    first_relevant_rank: int | None = None
+    for rank, doc_id in enumerate(retrieved_doc_ids[:k], start=1):
+        if doc_id in seen:
+            continue
+        seen.add(doc_id)
+        if doc_id in gold_doc_ids:
+            relevant_count += 1
+            if first_relevant_rank is None:
+                first_relevant_rank = rank
+    return {
+        "hit": float(relevant_count > 0),
+        # 固定除以 K，少返回结果也不会获得虚高 Precision。
+        "precision": relevant_count / k,
+        "recall": relevant_count / len(gold_doc_ids),
+        "mrr": 0.0 if first_relevant_rank is None else 1.0 / first_relevant_rank,
+        "ndcg": ndcg_at_k(retrieved_doc_ids, gold_doc_ids, k),
+    }
+
+
+def percentile(values: list[float], probability: float) -> float:
+    """无额外依赖的线性插值分位数。"""
+
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    position = (len(ordered) - 1) * probability
+    lower = math.floor(position)
+    upper = math.ceil(position)
+    if lower == upper:
+        return ordered[lower]
+    return ordered[lower] * (upper - position) + ordered[upper] * (position - lower)
 
 
 def parse_args() -> argparse.Namespace:
@@ -157,6 +208,7 @@ def main() -> None:
     bm25_seconds = 0.0
     expanded_bm25_seconds = 0.0
     question_dense_seconds = 0.0
+    query_transform_seconds = 0.0
     rrf_seconds = 0.0
     reranker_seconds = 0.0
     if cache_meta is not None:
@@ -186,6 +238,7 @@ def main() -> None:
         bm25_seconds = float(cached_timing.get("bm25_seconds", 0.0))
         expanded_bm25_seconds = float(cached_timing.get("expanded_bm25_seconds", 0.0))
         question_dense_seconds = float(cached_timing.get("question_dense_seconds", 0.0))
+        query_transform_seconds = float(cached_timing.get("query_transform_seconds", 0.0))
         rrf_seconds = float(cached_timing.get("rrf_seconds", 0.0))
         reranker_seconds = float(cached_timing.get("reranker_seconds", 0.0))
         retrieval_pipeline_seconds = float(cached_timing["retrieval_pipeline_seconds"])
@@ -257,19 +310,27 @@ def main() -> None:
     predictions = []
     totals = {
         "rag_em": 0.0,
+        "rag_answer_precision": 0.0,
+        "rag_answer_recall": 0.0,
         "rag_f1": 0.0,
         "candidate_hit": 0.0,
         "candidate_recall": 0.0,
         "hit": 0.0,
+        "precision": 0.0,
         "recall": 0.0,
+        "mrr": 0.0,
         "dense_recall": 0.0,
         "dense_ndcg": 0.0,
         "ndcg": 0.0,
+        "retrieval_hit_answer_f1_ge_05": 0.0,
+        "retrieval_hit_answer_f1_lt_05": 0.0,
     }
     if not args.skip_no_rag:
         totals.update({"no_rag_em": 0.0, "no_rag_f1": 0.0})
     no_rag_generation_seconds = 0.0
     rag_generation_seconds = 0.0
+    no_rag_latencies: list[float] = []
+    rag_latencies: list[float] = []
 
     for number, (item, dense, candidates, retrieved) in enumerate(
         zip(questions, dense_rows, candidate_rows, retrieved_rows), start=1
@@ -293,6 +354,9 @@ def main() -> None:
         rag_latency = time.perf_counter() - rag_started
         no_rag_generation_seconds += no_rag_latency
         rag_generation_seconds += rag_latency
+        if no_rag_answer is not None:
+            no_rag_latencies.append(no_rag_latency)
+        rag_latencies.append(rag_latency)
 
         rag_clean = clean_model_answer(rag_answer)
         retrieved_doc_ids = [row["source_id"] for row in retrieved]
@@ -302,20 +366,32 @@ def main() -> None:
         reranked_doc_ids = [row["source_id"] for row in retrieved[: args.top_k]]
         gold_doc_ids = set(item["gold_doc_ids"])
         candidate_hit = float(bool(set(candidate_doc_ids) & set(item["gold_doc_ids"])))
-        hit = float(bool(set(retrieved_doc_ids) & set(item["gold_doc_ids"])))
         candidate_recall = len(set(candidate_doc_ids) & gold_doc_ids) / len(gold_doc_ids)
-        recall = len(set(retrieved_doc_ids) & gold_doc_ids) / len(gold_doc_ids)
         dense_recall = len(set(dense_ranked_doc_ids) & gold_doc_ids) / len(gold_doc_ids)
+        retrieval_scores = retrieval_metrics_at_k(
+            reranked_doc_ids, gold_doc_ids, args.top_k
+        )
+        answer_precision, answer_recall, answer_f1 = character_prf(rag_clean, answers)
         scores = {
             "rag_em": exact_match(rag_clean, answers),
-            "rag_f1": character_f1(rag_clean, answers),
+            "rag_answer_precision": answer_precision,
+            "rag_answer_recall": answer_recall,
+            "rag_f1": answer_f1,
             "candidate_hit": candidate_hit,
             "candidate_recall": candidate_recall,
-            "hit": hit,
-            "recall": recall,
+            "hit": retrieval_scores["hit"],
+            "precision": retrieval_scores["precision"],
+            "recall": retrieval_scores["recall"],
+            "mrr": retrieval_scores["mrr"],
             "dense_recall": dense_recall,
             "dense_ndcg": ndcg_at_k(dense_ranked_doc_ids, gold_doc_ids, args.top_k),
-            "ndcg": ndcg_at_k(reranked_doc_ids, gold_doc_ids, args.top_k),
+            "ndcg": retrieval_scores["ndcg"],
+            "retrieval_hit_answer_f1_ge_05": float(
+                retrieval_scores["hit"] > 0 and answer_f1 >= 0.5
+            ),
+            "retrieval_hit_answer_f1_lt_05": float(
+                retrieval_scores["hit"] > 0 and answer_f1 < 0.5
+            ),
         }
         if no_rag_answer is not None:
             no_rag_clean = clean_model_answer(no_rag_answer)
@@ -362,6 +438,11 @@ def main() -> None:
                             "fusion_score",
                             "rrf_score",
                             "rerank_score",
+                            "title",
+                            "domain",
+                            "page",
+                            "section_path",
+                            "text",
                         )
                         if key in row
                     }
@@ -393,6 +474,8 @@ def main() -> None:
         "backend": args.backend,
         "model": client.model,
         "timing": {
+            "query_transform_seconds": query_transform_seconds,
+            "query_transform_ms_per_query": query_transform_seconds * 1000 / len(questions),
             "dense_seconds": dense_seconds,
             "dense_ms_per_query": dense_seconds * 1000 / len(questions),
             "bm25_seconds": bm25_seconds,
@@ -411,21 +494,53 @@ def main() -> None:
             ),
             "no_rag_generation_seconds": no_rag_generation_seconds,
             "no_rag_generation_ms_per_query": no_rag_generation_seconds * 1000 / len(questions),
+            "no_rag_generation_p50_ms": percentile(no_rag_latencies, 0.50) * 1000,
+            "no_rag_generation_p95_ms": percentile(no_rag_latencies, 0.95) * 1000,
             "rag_generation_seconds": rag_generation_seconds,
             "rag_generation_ms_per_query": rag_generation_seconds * 1000 / len(questions),
+            "rag_generation_p50_ms": percentile(rag_latencies, 0.50) * 1000,
+            "rag_generation_p95_ms": percentile(rag_latencies, 0.95) * 1000,
             "rag_pipeline_seconds": pipeline_seconds,
             "rag_pipeline_ms_per_query": pipeline_seconds * 1000 / len(questions),
+            "rag_pipeline_estimated_p50_ms": (
+                retrieval_pipeline_seconds * 1000 / len(questions)
+                + percentile(rag_latencies, 0.50) * 1000
+            ),
+            "rag_pipeline_estimated_p95_ms": (
+                retrieval_pipeline_seconds * 1000 / len(questions)
+                + percentile(rag_latencies, 0.95) * 1000
+            ),
             "model_loading_included": False,
             "no_rag_enabled": not args.skip_no_rag,
         },
         "retrieval_quality": {
             "k": args.top_k,
+            "hit_at_k": averages["hit"],
+            "precision_at_k": averages["precision"],
+            "mrr_at_k": averages["mrr"],
             "dense_ndcg_at_k": averages["dense_ndcg"],
             "ndcg_at_k": averages["ndcg"],
             "final_delta_vs_dense": averages["ndcg"] - averages["dense_ndcg"],
             "dense_recall_at_k": averages["dense_recall"],
             "recall_at_k": averages["recall"],
             "relevance_level": "page/source_id",
+        },
+        "generation_quality": {
+            "em": averages["rag_em"],
+            "answer_precision": averages["rag_answer_precision"],
+            "answer_recall": averages["rag_answer_recall"],
+            "answer_f1": averages["rag_f1"],
+            "retrieval_hit_and_answer_f1_ge_0_5": averages[
+                "retrieval_hit_answer_f1_ge_05"
+            ],
+            "retrieval_hit_but_answer_f1_lt_0_5": averages[
+                "retrieval_hit_answer_f1_lt_05"
+            ],
+            "faithfulness": None,
+            "faithfulness_note": (
+                "运行 evaluate_faithfulness.py 后由逐事实 LLM judge 补充；"
+                "EM/F1 不能直接衡量是否忠于检索资料。"
+            ),
         },
         "averages": averages,
         "rag_minus_no_rag": (
@@ -493,7 +608,9 @@ def main() -> None:
     )
     print(f"  {candidate_name} Candidate Hit@{candidate_k}={averages['candidate_hit']:.4f}")
     print(f"  检索 Hit@{args.top_k}={averages['hit']:.4f}")
+    print(f"  检索 Precision@{args.top_k}={averages['precision']:.4f}")
     print(f"  检索 Recall@{args.top_k}={averages['recall']:.4f}")
+    print(f"  检索 MRR@{args.top_k}={averages['mrr']:.4f}")
     print(f"  Dense nDCG@{args.top_k}={averages['dense_ndcg']:.4f}")
     print(f"  最终 nDCG@{args.top_k}={averages['ndcg']:.4f}")
     if reranker_enabled:
@@ -513,6 +630,11 @@ def main() -> None:
         print(
             "  问题 FAISS："
             f"{question_dense_seconds * 1000 / len(questions):.1f} ms/query"
+        )
+    if query_transform_seconds > 0:
+        print(
+            "  查询变换（LLM）："
+            f"{query_transform_seconds * 1000 / len(questions):.1f} ms/query"
         )
     if args.hybrid or rrf_seconds > 0:
         print(f"  RRF 融合：{rrf_seconds * 1000 / len(questions):.1f} ms/query")

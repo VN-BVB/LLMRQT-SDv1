@@ -1,0 +1,49 @@
+{
+  "question_count": 100,
+  "top_k": 5,
+  "candidate_k": 50,
+  "mode": "dense_then_reranker",
+  "backend": "local-awq",
+  "model": "/home/lyc/workspace/lastdata/eagle3/qwen3_1_7b_awq_eagle3_benchmark/checkpoints/Qwen3-1.7B-W4A16-AWQ",
+  "timing": {
+    "dense_seconds": 7.665286039999046,
+    "dense_ms_per_query": 76.65286039999046,
+    "reranker_seconds": 79.80282878999787,
+    "reranker_ms_per_query": 798.0282878999787,
+    "no_rag_generation_seconds": 94.82194700801483,
+    "no_rag_generation_ms_per_query": 948.2194700801483,
+    "rag_generation_seconds": 52.754427295989444,
+    "rag_generation_ms_per_query": 527.5442729598944,
+    "rag_pipeline_seconds": 140.22254212598637,
+    "rag_pipeline_ms_per_query": 1402.2254212598637,
+    "model_loading_included": false
+  },
+  "retrieval_quality": {
+    "k": 5,
+    "dense_ndcg_at_k": 0.486175484739469,
+    "ndcg_at_k": 0.633805080862381,
+    "reranker_delta": 0.147629596122912,
+    "relevance_level": "page/source_id"
+  },
+  "averages": {
+    "no_rag_em": 0.01,
+    "no_rag_f1": 0.27737894184385964,
+    "rag_em": 0.13,
+    "rag_f1": 0.4123531803226916,
+    "candidate_hit": 0.92,
+    "hit": 0.8,
+    "dense_ndcg": 0.486175484739469,
+    "ndcg": 0.633805080862381
+  },
+  "rag_minus_no_rag": {
+    "em": 0.12000000000000001,
+    "f1": 0.13497423847883194
+  },
+  "note": "生成式回答不一定与短标准答案字面一致，建议人工复查 predictions.jsonl。",
+  "reranker": {
+    "model": "BAAI/bge-reranker-v2-m3",
+    "device": "cuda",
+    "batch_size": 8,
+    "max_length": 512
+  }
+}

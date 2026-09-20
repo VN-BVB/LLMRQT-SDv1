@@ -1,0 +1,29 @@
+{
+  "dataset": "OHR-Bench",
+  "parquet": "/home/lyc/workspace/rag/data/ohr_bench/raw/OHR-Bench_v2.parquet",
+  "qa_file": "/home/lyc/workspace/rag/data/ohr_bench/raw/qas_v2.json",
+  "text_column": "gt_text",
+  "logical_document_count": 1260,
+  "page_document_count": 8259,
+  "question_count": 8456,
+  "skipped_question_count": 42,
+  "page_count_by_domain": {
+    "academic": 947,
+    "administration": 1272,
+    "finance": 2116,
+    "law": 1164,
+    "manual": 1623,
+    "news": 478,
+    "textbook": 659
+  },
+  "question_count_by_domain": {
+    "academic": 1179,
+    "administration": 1332,
+    "finance": 1367,
+    "law": 1142,
+    "manual": 1151,
+    "news": 1202,
+    "textbook": 1083
+  },
+  "page_number_note": "page_index/evidence_page_indices are zero-based; page/evidence_pages are one-based"
+}

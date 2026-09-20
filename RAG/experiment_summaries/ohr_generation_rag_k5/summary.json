@@ -1,0 +1,43 @@
+{
+  "question_count": 100,
+  "top_k": 5,
+  "candidate_k": 5,
+  "mode": "dense",
+  "backend": "local-awq",
+  "model": "/home/lyc/workspace/lastdata/eagle3/qwen3_1_7b_awq_eagle3_benchmark/checkpoints/Qwen3-1.7B-W4A16-AWQ",
+  "timing": {
+    "dense_seconds": 6.3151608490006765,
+    "dense_ms_per_query": 63.151608490006765,
+    "reranker_seconds": 0.0,
+    "reranker_ms_per_query": 0.0,
+    "no_rag_generation_seconds": 137.99775458099612,
+    "no_rag_generation_ms_per_query": 1379.9775458099612,
+    "rag_generation_seconds": 77.16581321297781,
+    "rag_generation_ms_per_query": 771.6581321297781,
+    "rag_pipeline_seconds": 83.48097406197849,
+    "rag_pipeline_ms_per_query": 834.8097406197849,
+    "model_loading_included": false
+  },
+  "retrieval_quality": {
+    "k": 5,
+    "dense_ndcg_at_k": 0.486175484739469,
+    "ndcg_at_k": 0.486175484739469,
+    "reranker_delta": 0.0,
+    "relevance_level": "page/source_id"
+  },
+  "averages": {
+    "no_rag_em": 0.01,
+    "no_rag_f1": 0.27737894184385964,
+    "rag_em": 0.11,
+    "rag_f1": 0.3473331471741744,
+    "candidate_hit": 0.64,
+    "hit": 0.64,
+    "dense_ndcg": 0.486175484739469,
+    "ndcg": 0.486175484739469
+  },
+  "rag_minus_no_rag": {
+    "em": 0.1,
+    "f1": 0.06995420533031477
+  },
+  "note": "生成式回答不一定与短标准答案字面一致，建议人工复查 predictions.jsonl。"
+}

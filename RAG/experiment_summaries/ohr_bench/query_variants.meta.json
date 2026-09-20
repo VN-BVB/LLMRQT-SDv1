@@ -1,0 +1,9 @@
+{
+  "question_count": 100,
+  "prompt_version": "rewrite_stepback_decompose_v1",
+  "backend": "vllm",
+  "model": "qwen3-1.7b-awq",
+  "fallback_count": 0,
+  "total_seconds": 12.238034892001451,
+  "ms_per_query": 122.38034892001451
+}

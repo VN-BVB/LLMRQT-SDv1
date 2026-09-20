@@ -1,0 +1,18 @@
+{
+  "question_count": 50,
+  "top_k": 3,
+  "backend": "local-awq",
+  "model": "/home/lyc/workspace/lastdata/eagle3/qwen3_1_7b_awq_eagle3_benchmark/checkpoints/Qwen3-1.7B-W4A16-AWQ",
+  "averages": {
+    "no_rag_em": 0.02,
+    "no_rag_f1": 0.2606654692750112,
+    "rag_em": 0.14,
+    "rag_f1": 0.3600757770771694,
+    "hit": 0.68
+  },
+  "rag_minus_no_rag": {
+    "em": 0.12000000000000001,
+    "f1": 0.0994103078021582
+  },
+  "note": "生成式回答不一定与短标准答案字面一致，建议人工复查 predictions.jsonl。"
+}

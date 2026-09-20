@@ -1,0 +1,110 @@
+{
+  "experiment": "fixed_small_corpus_full_scan_rrf",
+  "model": "BAAI/bge-m3",
+  "device": "cuda:0",
+  "seed": 20260920,
+  "question_count": 2,
+  "corpus_chunk_count": 100,
+  "gold_source_count": 2,
+  "max_length": 128,
+  "rrf_k": 60,
+  "selected_question_ids": [
+    "97f62b4e-cef1-4013-8d1b-1a143c631297",
+    "62eb0802-e4c8-4737-afa7-08885a938325"
+  ],
+  "metrics": {
+    "dense_sparse_colbert": {
+      "1": {
+        "hit": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0
+      },
+      "3": {
+        "hit": 1.0,
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0
+      },
+      "5": {
+        "hit": 1.0,
+        "precision": 0.2,
+        "recall": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0
+      }
+    },
+    "dense_bm25": {
+      "1": {
+        "hit": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0
+      },
+      "3": {
+        "hit": 1.0,
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0
+      },
+      "5": {
+        "hit": 1.0,
+        "precision": 0.2,
+        "recall": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0
+      }
+    },
+    "dense_colbert": {
+      "1": {
+        "hit": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0
+      },
+      "3": {
+        "hit": 1.0,
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0
+      },
+      "5": {
+        "hit": 1.0,
+        "precision": 0.2,
+        "recall": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0
+      }
+    }
+  },
+  "timing": {
+    "offline": {
+      "bge_document_encode_seconds": 1.0807894159997886,
+      "bm25_build_seconds": 0.3873443470001803
+    },
+    "shared_components_ms_per_query": {
+      "dense_only_query_encode": 12.945579499955784,
+      "multimode_query_encode": 20.048352000230807,
+      "dense_score": 6.998169500093354,
+      "sparse_score": 0.08905899994715583,
+      "bm25_score": 0.33548450028320076,
+      "colbert_score": 106.78369000015664
+    },
+    "estimated_online_ms_per_query": {
+      "dense_sparse_colbert": 133.99065900042237,
+      "dense_bm25": 20.35062200032674,
+      "dense_colbert": 133.9016000004752
+    }
+  },
+  "notes": [
+    "三组均在同一固定小语料上全库评分，并使用等权 RRF 融合排名。",
+    "文档编码和 BM25 建库属于离线成本，不计入在线延迟。",
+    "延迟为批量处理总耗时除以问题数，代表吞吐等效值，不是并发服务 P95。"
+  ]
+}

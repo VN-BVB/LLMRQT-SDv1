@@ -1,6 +1,6 @@
-# 你的 vLLM 环境已经包含 torch、transformers 和 numpy；通常只需补装 faiss-cpu。
+# 当前 Linux + NVIDIA 环境使用 FAISS GPU；纯 CPU 机器请改回 faiss-cpu>=1.8.0。
 # 为了让这个目录也能在一个全新的 Python 环境中使用，这里把直接依赖全部列出。
-faiss-cpu>=1.8.0
+faiss-gpu==1.15.1; platform_system == "Linux" and platform_machine == "x86_64"
 numpy>=1.26.0
 torch>=2.2.0
 transformers>=4.44.0

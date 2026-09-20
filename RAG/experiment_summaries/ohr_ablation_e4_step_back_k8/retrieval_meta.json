@@ -1,0 +1,51 @@
+{
+  "mode": "query_transform_step_back_dense_bm25_rrf_reranker",
+  "question_count": 100,
+  "parameters": {
+    "limit": 100,
+    "variant_mode": "step_back",
+    "average_queries_per_question": 1.8,
+    "dense_k": 50,
+    "bm25_k": 50,
+    "candidate_k": 50,
+    "top_k": 8,
+    "rrf_k": 60,
+    "embedding_device": "cuda",
+    "reranker_model": "BAAI/bge-reranker-v2-m3",
+    "reranker_device": "cuda",
+    "reranker_batch_size": 8,
+    "reranker_max_length": 512
+  },
+  "timing": {
+    "query_transform_seconds": 12.238034892001451,
+    "query_transform_ms_per_query": 122.38034892001451,
+    "dense_seconds": 0.5672428159996343,
+    "dense_ms_per_query": 5.672428159996343,
+    "bm25_seconds": 0.19284197099932499,
+    "bm25_ms_per_query": 1.9284197099932499,
+    "rrf_seconds": 0.013493252999978722,
+    "rrf_ms_per_query": 0.13493252999978722,
+    "reranker_seconds": 33.95370636899952,
+    "reranker_ms_per_query": 339.5370636899952,
+    "retrieval_without_transform_seconds": 34.72728440899846,
+    "retrieval_without_transform_ms_per_query": 347.2728440899846,
+    "retrieval_pipeline_seconds": 46.96531930099991,
+    "retrieval_pipeline_ms_per_query": 469.6531930099991
+  },
+  "retrieval_quality": {
+    "candidate": {
+      "hit_at_k": 0.92,
+      "precision_at_k": 0.023800000000000016,
+      "recall_at_k": 0.915,
+      "mrr_at_k": 0.5955654955856571,
+      "ndcg_at_k": 0.6404865471380445
+    },
+    "final": {
+      "hit_at_k": 0.83,
+      "precision_at_k": 0.13,
+      "recall_at_k": 0.795,
+      "mrr_at_k": 0.6310119047619049,
+      "ndcg_at_k": 0.6416081363399863
+    }
+  }
+}
